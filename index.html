@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SORT WISE — AI Waste Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── RESET ─────────────────────────────────────────────────── */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    :root {
+      --bg:      #04040a;
+      --s1:      #0b0b14;
+      --s2:      #111120;
+      --border:  #1c1c2e;
+      --green:   #00e676;
+      --green2:  #00c853;
+      --red:     #ff1744;
+      --amber:   #ffc400;
+      --text:    #d8d8ea;
+      --muted:   #52526a;
+      --sans:    'Syne', sans-serif;
+      --mono:    'Space Mono', monospace;
+      --serif:   'Playfair Display', serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--green); border-radius: 2px; }
+
+    /* ─── CUSTOM CURSOR ──────────────────────────────────────────── */
+    @media (pointer: fine) {
+      body { cursor: none; }
+      #cursor {
+        position:fixed; pointer-events:none; z-index:10000;
+        width:6px; height:6px; border-radius:50%;
+        background: var(--green); transform:translate(-50%,-50%);
+        mix-blend-mode: difference;
+      }
+      #cursor-ring {
+        position:fixed; pointer-events:none; z-index:9999;
+        width:28px; height:28px; border-radius:50%;
+        border: 1px solid rgba(0,230,118,.55);
+        transform:translate(-50%,-50%);
+        transition: width .2s, height .2s, border-color .2s;
+        mix-blend-mode: difference;
+      }
+      #cursor-ring.big { width:50px; height:50px; border-color:var(--green); }
+    }
+
+    /* ─── LOADING SCREEN ─────────────────────────────────────────── */
+    #loader {
+      position:fixed; inset:0; z-index:9000;
+      background:#000;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      overflow:hidden;
+      transition: opacity .9s ease, visibility .9s;
+    }
+    #loader.out { opacity:0; visibility:hidden; }
+
+    /* scanlines */
+    #loader::before {
+      content:''; position:absolute; inset:0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,230,118,.012) 2px, rgba(0,230,118,.012) 4px
+      );
+      pointer-events:none; z-index:1;
+    }
+
+    .ld-inner { position:relative; z-index:2; text-align:center; padding:0 24px; width:100%; }
+
+    .ld-eyebrow {
+      font-family:var(--mono); font-size:clamp(9px,1.4vw,11px);
+      color:var(--green); letter-spacing:.3em; text-transform:uppercase;
+      margin-bottom:28px;
+      animation: fdIn .5s .2s both;
+    }
+
+    .ld-title {
+      font-family:var(--sans); font-weight:800;
+      font-size:clamp(80px,20vw,220px);
+      line-height:.86; letter-spacing:-.04em;
+      display:inline-block;
+    }
+
+    .ld-title .t1 { color:#fff; display:block; }
+    .ld-title .t2 { color:var(--green); display:block; }
+
+    /* glitch */
+    .glitch { position:relative; animation: gMain 5s infinite; }
+    .glitch::before, .glitch::after {
+      content:attr(data-t); position:absolute; top:0; left:0; width:100%;
+    }
+    .glitch::before {
+      color:var(--red); clip-path:polygon(0 0,100% 0,100% 33%,0 33%);
+      animation: gTop 5s infinite;
+    }
+    .glitch::after {
+      color:var(--green); clip-path:polygon(0 67%,100% 67%,100% 100%,0 100%);
+      animation: gBot 5s infinite;
+    }
+    @keyframes gMain {
+      0%,88%,100%{transform:translate(0)}
+      89%{transform:translate(-3px,1px)}
+      90%{transform:translate(3px,-1px)}
+      91%{transform:translate(0)}
+      92%{transform:translate(2px,2px)}
+      93%{transform:translate(-1px,0)}
+    }
+    @keyframes gTop {
+      0%,88%,100%{transform:translate(0);opacity:0}
+      89%{transform:translate(-4px);opacity:.8}
+      90%{transform:translate(4px);opacity:.8}
+      91%{transform:translate(0);opacity:0}
+    }
+    @keyframes gBot {
+      0%,91%,100%{transform:translate(0);opacity:0}
+      92%{transform:translate(4px);opacity:.8}
+      93%{transform:translate(-4px);opacity:.8}
+      94%{transform:translate(0);opacity:0}
+    }
+
+    .ld-msg {
+      font-family:var(--mono); font-size:clamp(9px,1.3vw,11px);
+      color:var(--muted); margin-top:44px; height:18px;
+      letter-spacing:.1em;
+    }
+    .ld-msg .accent { color:var(--green); }
+
+    .ld-bar-wrap {
+      width:min(500px,82vw); margin:14px auto 0;
+      height:2px; background:rgba(255,255,255,.07);
+      border-radius:2px; overflow:hidden;
+    }
+    .ld-bar {
+      height:100%; width:0%; border-radius:2px;
+      background:var(--green);
+      box-shadow: 0 0 14px rgba(0,230,118,.7);
+      transition: width .25s ease;
+    }
+    .ld-pct {
+      font-family:var(--mono); font-size:10px; color:var(--muted);
+      margin-top:6px; text-align:right;
+      width:min(500px,82vw); margin-left:auto; margin-right:auto;
+    }
+
+    .ld-log {
+      position:absolute; bottom:28px; left:28px;
+      font-family:var(--mono); font-size:9px;
+      color:rgba(0,230,118,.28); line-height:1.9;
+      text-align:left; max-width:300px; pointer-events:none;
+    }
+
+    .ld-corner {
+      position:absolute; width:30px; height:30px;
+      border-color:rgba(0,230,118,.18); border-style:solid;
+    }
+    .ld-corner.tl { top:20px; left:20px; border-width:1px 0 0 1px; }
+    .ld-corner.tr { top:20px; right:20px; border-width:1px 1px 0 0; }
+    .ld-corner.bl { bottom:20px; left:20px; border-width:0 0 1px 1px; }
+    .ld-corner.br { bottom:20px; right:20px; border-width:0 1px 1px 0; }
+
+    /* ─── NAV ────────────────────────────────────────────────────── */
+    nav {
+      position:fixed; top:0; left:0; right:0; z-index:100;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 32px;
+      border-bottom:1px solid var(--border);
+      backdrop-filter: blur(16px);
+      background: rgba(4,4,10,.8);
+    }
+
+    .nav-logo {
+      font-family:var(--sans); font-weight:800; font-size:15px;
+      letter-spacing:-.02em; color:var(--text); text-decoration:none;
+      display:flex; align-items:center; gap:10px;
+    }
+
+    .nav-dot {
+      width:7px; height:7px; border-radius:50%;
+      background:var(--green); animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(0,230,118,.4)}
+      50%{opacity:.5; box-shadow:0 0 0 5px rgba(0,230,118,0)}
+    }
+
+    .nav-links { display:flex; align-items:center; gap:28px; list-style:none; }
+    .nav-links a {
+      font-family:var(--mono); font-size:9px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--muted); text-decoration:none;
+      transition:color .2s;
+    }
+    .nav-links a:hover { color:var(--green); }
+
+    .nav-pill {
+      font-family:var(--mono); font-size:9px; padding:5px 12px;
+      border:1px solid rgba(0,230,118,.35); border-radius:20px;
+      color:var(--green); letter-spacing:.15em; text-transform:uppercase;
+    }
+
+    /* ─── HERO ───────────────────────────────────────────────────── */
+    .hero {
+      min-height:100vh; padding-top:80px;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      position:relative; overflow:hidden;
+    }
+
+    /* grid bg */
+    .hero::before {
+      content:''; position:absolute; inset:0; pointer-events:none;
+      background-image:
+        linear-gradient(rgba(0,230,118,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,230,118,.025) 1px, transparent 1px);
+      background-size:52px 52px;
+      mask-image:radial-gradient(ellipse 75% 75% at 50% 50%, black 20%, transparent 100%);
+    }
+
+    /* big bg watermark like Drop Edition */
+    .hero-watermark {
+      position:absolute; bottom:-2%; left:50%;
+      transform:translateX(-50%);
+      font-family:var(--sans); font-weight:800;
+      font-size:clamp(80px,22vw,280px);
+      letter-spacing:-.05em; white-space:nowrap;
+      color:rgba(255,255,255,.025); line-height:1;
+      pointer-events:none; user-select:none;
+      z-index:0;
+    }
+
+    .hero-eyebrow {
+      font-family:var(--mono); font-size:10px; letter-spacing:.3em;
+      color:var(--green); text-transform:uppercase;
+      margin-bottom:20px; z-index:1;
+      animation: slideUp .6s .15s both;
+    }
+
+    .hero-title {
+      font-size:clamp(52px,11vw,130px);
+      font-weight:800; line-height:.9;
+      letter-spacing:-.04em; text-align:center;
+      z-index:1; position:relative;
+      animation: slideUp .7s .3s both;
+    }
+
+    .hero-title em {
+      font-family:var(--serif); font-style:italic;
+      font-size:.82em; color:var(--green);
+    }
+
+    .hero-sub {
+      font-family:var(--mono); font-size:10px;
+      color:var(--muted); letter-spacing:.18em;
+      text-transform:uppercase; margin-top:18px; z-index:1;
+      animation: slideUp .7s .45s both;
+    }
+
+    /* ─── INPUT ZONE ─────────────────────────────────────────────── */
+    .input-zone {
+      width:min(740px, 94vw); margin:40px auto 0;
+      z-index:1; position:relative;
+      animation: slideUp .7s .55s both;
+    }
+
+    .mode-tabs {
+      display:flex; width:fit-content;
+      border:1px solid var(--border); border-radius:8px;
+      overflow:hidden; margin-bottom:18px;
+    }
+
+    .mode-tab {
+      font-family:var(--mono); font-size:9px; letter-spacing:.22em;
+      text-transform:uppercase; padding:10px 22px;
+      background:transparent; border:none; color:var(--muted);
+      cursor:pointer; transition:background .2s, color .2s;
+    }
+    .mode-tab.active { background:var(--green); color:#000; font-weight:700; }
+
+    /* Camera container */
+    .cam-wrap {
+      position:relative; width:100%; aspect-ratio:16/9;
+      background:var(--s1); border:1px solid var(--border);
+      border-radius:12px; overflow:hidden;
+    }
+
+    /* corner brackets */
+    .cam-wrap::before, .cam-wrap::after {
+      content:''; position:absolute;
+      width:22px; height:22px;
+      border-color:var(--green); border-style:solid; z-index:5;
+    }
+    .cam-wrap::before { top:12px; left:12px; border-width:2px 0 0 2px; border-radius:2px 0 0 0; }
+    .cam-wrap::after  { bottom:12px; right:12px; border-width:0 2px 2px 0; border-radius:0 0 2px 0; }
+
+    #cam-video {
+      width:100%; height:100%;
+      object-fit:contain; display:none;
+    }
+
+    #detect-canvas {
+      position:absolute; top:0; left:0;
+      width:100%; height:100%;
+      pointer-events:none; z-index:3;
+    }
+
+    .cam-ph {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:14px;
+    }
+
+    .cam-ph-icon {
+      width:60px; height:60px; border-radius:50%;
+      border:1.5px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .cam-ph-icon svg { width:26px; height:26px; stroke:var(--muted); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+
+    .cam-ph p {
+      font-family:var(--mono); font-size:10px;
+      color:var(--muted); text-align:center;
+      letter-spacing:.1em; line-height:1.9;
+    }
+
+    /* scan line */
+    .scan-line {
+      position:absolute; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,var(--green),transparent);
+      opacity:0; z-index:4; pointer-events:none;
+    }
+    .scanning .scan-line { opacity:.55; animation:scanMove 2.2s linear infinite; }
+    @keyframes scanMove { 0%{top:0%} 100%{top:100%} }
+
+    .live-badge {
+      position:absolute; top:14px; right:14px;
+      font-family:var(--mono); font-size:8px; letter-spacing:.22em;
+      color:var(--green); background:rgba(0,0,0,.75);
+      padding:4px 10px; border-radius:20px;
+      border:1px solid rgba(0,230,118,.3);
+      display:none; z-index:5;
+      animation:blink 1.2s infinite;
+    }
+    .scanning .live-badge { display:block; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* Analyzing overlay */
+    .analyze-overlay {
+      position:absolute; inset:0;
+      background:rgba(4,4,10,.88);
+      display:none; align-items:center;
+      justify-content:center; flex-direction:column;
+      gap:14px; z-index:10;
+    }
+    .analyze-overlay.show { display:flex; }
+
+    .spin {
+      width:44px; height:44px;
+      border:2px solid var(--border); border-top-color:var(--green);
+      border-radius:50%; animation:spin .75s linear infinite;
+    }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    .analyze-txt {
+      font-family:var(--mono); font-size:10px;
+      color:var(--green); letter-spacing:.22em; text-transform:uppercase;
+    }
+
+    /* Controls */
+    .controls {
+      display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;
+    }
+
+    .btn {
+      font-family:var(--mono); font-size:10px; letter-spacing:.18em;
+      text-transform:uppercase; padding:13px 26px;
+      border-radius:6px; border:none; cursor:pointer;
+      transition:all .18s; position:relative; overflow:hidden;
+    }
+    .btn-primary { background:var(--green); color:#000; font-weight:700; }
+    .btn-primary:hover { background:var(--green2); transform:translateY(-1px); }
+    .btn-secondary { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .btn-secondary:hover { border-color:var(--green); color:var(--green); }
+    .btn-danger { background:transparent; border:1px solid rgba(255,23,68,.4); color:var(--red); }
+    .btn-danger:hover { background:var(--red); color:#fff; }
+
+    /* Upload zone */
+    .upload-zone {
+      position:relative; width:100%; aspect-ratio:16/9;
+      border:1px dashed var(--border); border-radius:12px;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:14px;
+      cursor:pointer; background:var(--s1);
+      transition:border-color .2s, background .2s; overflow:hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color:var(--green); background:rgba(0,230,118,.04); }
+    .upload-zone p {
+      font-family:var(--mono); font-size:10px;
+      color:var(--muted); text-align:center;
+      letter-spacing:.1em; line-height:1.9;
+    }
+    .upload-zone::before, .upload-zone::after {
+      content:''; position:absolute;
+      width:22px; height:22px; border-color:var(--border); border-style:solid;
+    }
+    .upload-zone::before { top:12px; left:12px; border-width:2px 0 0 2px; }
+    .upload-zone::after  { bottom:12px; right:12px; border-width:0 2px 2px 0; }
+    .upload-zone:hover::before, .upload-zone:hover::after { border-color:var(--green); }
+
+    #up-preview {
+      position:absolute; inset:0; width:100%; height:100%;
+      object-fit:contain; display:none;
+    }
+
+    /* ─── RESULTS ────────────────────────────────────────────────── */
+    #results-sec {
+      display:none; padding:0 32px 80px;
+      max-width:800px; margin:0 auto;
+    }
+
+    .results-hd {
+      display:flex; align-items:baseline; gap:16px;
+      padding-top:48px; margin-bottom:20px;
+      border-top:1px solid var(--border);
+    }
+
+    .results-title {
+      font-size:clamp(30px,6vw,52px);
+      font-weight:800; letter-spacing:-.03em;
+    }
+
+    .results-n {
+      font-family:var(--mono); font-size:10px; color:var(--muted);
+    }
+
+    /* stats bar */
+    .stats-bar {
+      display:flex; border:1px solid var(--border);
+      border-radius:8px; overflow:hidden; margin-bottom:28px;
+    }
+    .stat {
+      flex:1; padding:18px; text-align:center;
+      border-right:1px solid var(--border);
+    }
+    .stat:last-child { border-right:none; }
+    .stat-val { font-size:clamp(22px,4vw,36px); font-weight:800; letter-spacing:-.02em; }
+    .stat-val.g { color:var(--green); }
+    .stat-val.r { color:var(--red); }
+    .stat-val.a { color:var(--amber); }
+    .stat-lbl { font-family:var(--mono); font-size:8px; letter-spacing:.2em; color:var(--muted); text-transform:uppercase; margin-top:2px; }
+
+    /* summary chips */
+    .chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:24px; }
+    .chip {
+      font-family:var(--mono); font-size:9px; letter-spacing:.18em;
+      padding:5px 14px; border-radius:20px; text-transform:uppercase;
+    }
+    .chip.g { background:rgba(0,230,118,.09); border:1px solid rgba(0,230,118,.28); color:var(--green); }
+    .chip.r { background:rgba(255,23,68,.09);  border:1px solid rgba(255,23,68,.28);  color:var(--red);   }
+    .chip.a { background:rgba(255,196,0,.09);  border:1px solid rgba(255,196,0,.28);  color:var(--amber); }
+
+    /* cards grid */
+    .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+
+    .card {
+      background:var(--s1); border:1px solid var(--border);
+      border-radius:12px; padding:22px; position:relative;
+      overflow:hidden; transition:transform .2s, border-color .2s;
+      opacity:0; animation:cardIn .4s ease forwards;
+    }
+    .card:hover { transform:translateY(-3px); }
+    @keyframes cardIn { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+    .card::before {
+      content:''; position:absolute;
+      top:0; left:0; right:0; height:2px;
+    }
+    .card.g { border-color:rgba(0,230,118,.2); }
+    .card.g::before { background:var(--green); }
+    .card.r { border-color:rgba(255,23,68,.2); }
+    .card.r::before { background:var(--red); }
+    .card.a { border-color:rgba(255,196,0,.2); }
+    .card.a::before { background:var(--amber); }
+
+    .card-badge {
+      font-family:var(--mono); font-size:8px; letter-spacing:.28em;
+      text-transform:uppercase; padding:4px 10px;
+      border-radius:20px; display:inline-block; margin-bottom:12px;
+    }
+    .g .card-badge { background:rgba(0,230,118,.1); border:1px solid rgba(0,230,118,.28); color:var(--green); }
+    .r .card-badge { background:rgba(255,23,68,.1);  border:1px solid rgba(255,23,68,.28);  color:var(--red);   }
+    .a .card-badge { background:rgba(255,196,0,.1);  border:1px solid rgba(255,196,0,.28);  color:var(--amber); }
+
+    .card-name { font-size:22px; font-weight:800; letter-spacing:-.02em; color:#fff; text-transform:capitalize; margin-bottom:3px; }
+    .card-conf { font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:14px; }
+
+    .conf-track { height:2px; background:var(--border); border-radius:2px; margin-bottom:16px; overflow:hidden; }
+    .conf-fill  { height:100%; border-radius:2px; }
+    .g .conf-fill { background:var(--green); }
+    .r .conf-fill { background:var(--red); }
+    .a .conf-fill { background:var(--amber); }
+
+    .card-divider { height:1px; background:var(--border); margin-bottom:14px; }
+
+    .card-meta { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .meta-lbl { font-family:var(--mono); font-size:8px; letter-spacing:.2em; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:2px; }
+    .meta-val { font-family:var(--mono); font-size:10px; color:var(--text); text-transform:capitalize; }
+
+    .card-tip {
+      font-family:var(--mono); font-size:9px; color:var(--muted);
+      line-height:1.7; padding:10px 12px;
+      background:var(--s2); border-radius:6px;
+      border-left:2px solid var(--border);
+    }
+    .g .card-tip { border-left-color:var(--green); }
+    .r .card-tip { border-left-color:var(--red); }
+    .a .card-tip { border-left-color:var(--amber); }
+
+    /* no results msg */
+    .no-results {
+      grid-column:1/-1; text-align:center; padding:60px 20px;
+      font-family:var(--mono); font-size:10px;
+      color:var(--muted); letter-spacing:.18em; line-height:1.9;
+    }
+
+    /* ─── INFO STRIP ─────────────────────────────────────────────── */
+    .info-strip {
+      background:var(--s1); border-top:1px solid var(--border);
+      padding:48px 32px; margin-top:60px;
+    }
+    .info-inner {
+      max-width:800px; margin:0 auto;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:32px;
+    }
+    .info-item h4 {
+      font-family:var(--mono); font-size:8px; letter-spacing:.3em;
+      color:var(--green); text-transform:uppercase; margin-bottom:10px;
+    }
+    .info-item p { font-size:13px; color:var(--muted); line-height:1.7; }
+
+    /* ─── FOOTER ─────────────────────────────────────────────────── */
+    footer {
+      border-top:1px solid var(--border); padding:22px 32px;
+      display:flex; align-items:center; justify-content:space-between;
+      max-width:800px; margin:0 auto;
+    }
+    footer p { font-family:var(--mono); font-size:9px; color:var(--muted); letter-spacing:.1em; }
+    footer p span { color:var(--green); }
+
+    /* ─── ANIMATIONS ─────────────────────────────────────────────── */
+    @keyframes fdIn  { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ─── UTILS ──────────────────────────────────────────────────── */
+    .hidden { display:none !important; }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media(max-width:640px){
+      nav { padding:14px 18px; }
+      .nav-links { display:none; }
+      .input-zone { margin-top:28px; }
+      .cards { grid-template-columns:1fr; }
+      .info-inner { grid-template-columns:1fr; }
+      footer { flex-direction:column; gap:6px; text-align:center; }
+      .stats-bar { flex-direction:column; }
+      .stat { border-right:none; border-bottom:1px solid var(--border); }
+      .stat:last-child { border-bottom:none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LOADING SCREEN
+═══════════════════════════════════════════════════════════════ -->
+<div id="loader">
+  <div class="ld-corner tl"></div>
+  <div class="ld-corner tr"></div>
+  <div class="ld-corner bl"></div>
+  <div class="ld-corner br"></div>
+
+  <div class="ld-inner">
+    <div class="ld-eyebrow">// INITIALIZING WASTE INTELLIGENCE SYSTEM v2.0</div>
+    <div class="ld-title">
+      <span class="t1 glitch" data-t="SORT">SORT</span>
+      <span class="t2 glitch" data-t="WISE">WISE</span>
+    </div>
+    <div class="ld-msg">
+      <span class="accent">SYS://</span>
+      <span id="ld-msg-txt">Booting neural core...</span>
+    </div>
+    <div class="ld-bar-wrap"><div class="ld-bar" id="ld-bar"></div></div>
+    <div class="ld-pct" id="ld-pct">0%</div>
+  </div>
+
+  <div class="ld-log" id="ld-log"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════════════════════ -->
+<div id="app" style="opacity:0; transition:opacity .7s ease;">
+
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="#">
+      <span class="nav-dot"></span>
+      SORT WISE
+    </a>
+    <ul class="nav-links">
+      <li><a href="#results-sec">RESULTS</a></li>
+      <li><a href="https://github.com" target="_blank">GITHUB</a></li>
+      <li><span class="nav-pill">FREE & OPEN SOURCE</span></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-watermark">SORT WISE</div>
+
+    <div class="hero-eyebrow">// AI-POWERED WASTE CLASSIFICATION — 80+ ITEM CLASSES</div>
+
+    <h1 class="hero-title">
+      IS IT<br>
+      <em>recyclable?</em>
+    </h1>
+
+    <p class="hero-sub">Point your camera or upload any photo — no setup required</p>
+
+    <!-- ── INPUT ZONE ── -->
+    <div class="input-zone">
+
+      <!-- Mode tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tab-cam"    onclick="switchMode('camera')">LIVE CAMERA</button>
+        <button class="mode-tab"        id="tab-upload" onclick="switchMode('upload')">UPLOAD IMAGE</button>
+      </div>
+
+      <!-- ── CAMERA MODE ── -->
+      <div id="mode-camera">
+        <div class="cam-wrap" id="cam-wrap">
+          <div class="scan-line"></div>
+          <div class="live-badge">● LIVE</div>
+          <canvas id="detect-canvas"></canvas>
+          <video id="cam-video" autoplay muted playsinline></video>
+          <div class="cam-ph" id="cam-ph">
+            <div class="cam-ph-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <p>TAP TO START CAMERA<br><span style="font-size:9px;opacity:.5">Supports phone back camera</span></p>
+          </div>
+          <div class="analyze-overlay" id="analyze-overlay-cam">
+            <div class="spin"></div>
+            <div class="analyze-txt">Detecting items...</div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="btn btn-primary"   id="btn-start"   onclick="startCamera()">START CAMERA</button>
+          <button class="btn btn-secondary hidden" id="btn-analyze" onclick="analyzeCamera()">ANALYZE FRAME</button>
+          <button class="btn btn-danger   hidden" id="btn-stop"    onclick="stopCamera()">STOP</button>
+        </div>
+      </div>
+
+      <!-- ── UPLOAD MODE ── -->
+      <div id="mode-upload" class="hidden">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-inp').click()">
+          <div class="cam-ph-icon">
+            <svg viewBox="0 0 24 24" style="stroke:var(--muted);fill:none;stroke-width:1.5;stroke-linecap:round;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p>CLICK OR DRAG AN IMAGE HERE<br><span style="font-size:9px;opacity:.5">Works with any background — no dataset needed</span></p>
+          <img id="up-preview" alt="preview">
+          <div class="analyze-overlay" id="analyze-overlay-up">
+            <div class="spin"></div>
+            <div class="analyze-txt">Detecting items...</div>
+          </div>
+        </div>
+        <input type="file" id="file-inp" accept="image/*" style="display:none" onchange="handleFile(event)">
+        <div class="controls">
+          <button class="btn btn-primary  hidden" id="btn-analyze-up" onclick="analyzeUpload()">ANALYZE IMAGE</button>
+          <button class="btn btn-secondary hidden" id="btn-clear-up"  onclick="clearUpload()">CLEAR</button>
+        </div>
+      </div>
+
+    </div><!-- /input-zone -->
+  </section>
+
+  <!-- ── RESULTS ── -->
+  <section id="results-sec">
+    <div style="max-width:800px;margin:0 auto;">
+
+      <div class="results-hd">
+        <h2 class="results-title">ANALYSIS REPORT</h2>
+        <span class="results-n" id="results-n"></span>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <div class="stat-val g" id="st-re">0</div>
+          <div class="stat-lbl">Recyclable</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val r" id="st-nr">0</div>
+          <div class="stat-lbl">Non-Recyclable</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val a" id="st-co">0</div>
+          <div class="stat-lbl">Compostable</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="st-to">0</div>
+          <div class="stat-lbl">Items Found</div>
+        </div>
+      </div>
+
+      <div class="chips" id="chips"></div>
+      <div class="cards" id="cards"></div>
+
+    </div>
+  </section>
+
+  <!-- ── INFO ── -->
+  <div class="info-strip">
+    <div class="info-inner">
+      <div class="info-item">
+        <h4>// Zero cost</h4>
+        <p>Runs entirely in your browser using TensorFlow.js. No server, no API fees, no account needed.</p>
+      </div>
+      <div class="info-item">
+        <h4>// Multi-item scan</h4>
+        <p>Detects every object in the frame simultaneously. Point it at a full bin and get results for each item.</p>
+      </div>
+      <div class="info-item">
+        <h4>// Any background</h4>
+        <p>COCO-SSD is trained on millions of real-world images. No custom dataset needed — just point and scan.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>SORT WISE — <span>Open Source</span> // Free Waste Intelligence</p>
+    <p>Built with <span>TensorFlow.js</span> + COCO-SSD</p>
+  </footer>
+
+</div><!-- /app -->
+
+<!-- Processing canvas (off-screen) -->
+<canvas id="proc-canvas" style="display:none;"></canvas>
+
+<!-- ════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+<script>
+// ════════════════════════════════════════
+//  WASTE DATABASE — 45+ classes
+// ════════════════════════════════════════
+const DB = {
+  'bottle':         { v:'recyclable',     cat:'Plastic / Glass',   tip:'Rinse clean before placing in your recycling bin.' },
+  'wine glass':     { v:'recyclable',     cat:'Glass',             tip:'Place in glass recycling or a bottle bank.' },
+  'cup':            { v:'non-recyclable', cat:'Mixed material',    tip:'Most disposable cups have a plastic lining — check the label.' },
+  'bowl':           { v:'recyclable',     cat:'Glass / Metal',     tip:'Clean thoroughly — food residue contaminates recycling.' },
+  'fork':           { v:'recyclable',     cat:'Metal',             tip:'Metal cutlery is recyclable at most facilities.' },
+  'knife':          { v:'recyclable',     cat:'Metal',             tip:'Wrap safely in tape or paper before placing in bin.' },
+  'spoon':          { v:'recyclable',     cat:'Metal',             tip:'Metal cutlery goes in the recycling bin.' },
+  'book':           { v:'recyclable',     cat:'Paper',             tip:'Remove hardcover — the paper interior is recyclable.' },
+  'laptop':         { v:'recyclable',     cat:'E-Waste',           tip:'Take to an e-waste collection center or a store drop-off point.' },
+  'cell phone':     { v:'recyclable',     cat:'E-Waste',           tip:'Many phone stores accept old devices for free recycling.' },
+  'keyboard':       { v:'recyclable',     cat:'E-Waste',           tip:'Drop at any e-waste facility or electronics store.' },
+  'mouse':          { v:'recyclable',     cat:'E-Waste',           tip:'E-waste recycling facility — do not place in regular bin.' },
+  'remote':         { v:'recyclable',     cat:'E-Waste',           tip:'Remove the batteries first — they go separately.' },
+  'tv':             { v:'recyclable',     cat:'E-Waste',           tip:'Retailer take-back programs or council e-waste collection.' },
+  'microwave':      { v:'recyclable',     cat:'Appliance',         tip:'Appliance recycling program or your local scrap metal yard.' },
+  'oven':           { v:'recyclable',     cat:'Metal / Appliance', tip:'Scrap metal yard or arrange council large-item collection.' },
+  'refrigerator':   { v:'recyclable',     cat:'Appliance',         tip:'Contains refrigerants — requires certified professional disposal.' },
+  'sink':           { v:'recyclable',     cat:'Metal',             tip:'Scrap metal recycling accepts porcelain and metal sinks.' },
+  'toaster':        { v:'recyclable',     cat:'E-Waste / Metal',   tip:'Small appliance — e-waste facility or scrap metal.' },
+  'clock':          { v:'recyclable',     cat:'E-Waste',           tip:'Remove batteries first; the device goes to e-waste.' },
+  'hair drier':     { v:'recyclable',     cat:'E-Waste',           tip:'Small appliance — take to an e-waste collection point.' },
+  'vase':           { v:'non-recyclable', cat:'Ceramic / Glass',   tip:'Ceramic is landfill; coloured glass — check local rules.' },
+  'scissors':       { v:'non-recyclable', cat:'Mixed / Sharp',     tip:'Wrap sharp edges and take to a household hazardous waste centre.' },
+  'backpack':       { v:'non-recyclable', cat:'Mixed Fabric',      tip:'Donate if still usable; otherwise general waste.' },
+  'handbag':        { v:'non-recyclable', cat:'Mixed Material',    tip:'Donate or check for a local textile recycling programme.' },
+  'suitcase':       { v:'non-recyclable', cat:'Mixed Material',    tip:'Donate if functional; else general waste.' },
+  'umbrella':       { v:'non-recyclable', cat:'Mixed Material',    tip:'Mixed materials make this very difficult to recycle.' },
+  'tie':            { v:'non-recyclable', cat:'Fabric',            tip:'Textile recycling bin or charity donation.' },
+  'toothbrush':     { v:'non-recyclable', cat:'Mixed Plastic',     tip:'TerraCycle offers a specialist recycling programme for these.' },
+  'teddy bear':     { v:'non-recyclable', cat:'Mixed Fabric',      tip:'Donate to charity if clean; else general waste.' },
+  'frisbee':        { v:'non-recyclable', cat:'Hard Plastic',      tip:'Check local plastic rules — usually general waste.' },
+  'sports ball':    { v:'non-recyclable', cat:'Rubber / Mixed',    tip:'Donate if usable; else general waste.' },
+  'kite':           { v:'non-recyclable', cat:'Mixed Material',    tip:'General waste only.' },
+  'baseball bat':   { v:'non-recyclable', cat:'Wood / Aluminum',   tip:'Donate or check scrap metal for aluminium bats.' },
+  'skateboard':     { v:'non-recyclable', cat:'Wood / Metal',      tip:'Donate functional boards; else general waste.' },
+  'surfboard':      { v:'non-recyclable', cat:'Foam / Fibreglass', tip:'Extremely difficult to recycle — general waste.' },
+  'tennis racket':  { v:'non-recyclable', cat:'Mixed Material',    tip:'Donate or general waste.' },
+  'baseball glove': { v:'non-recyclable', cat:'Leather',           tip:'Donate if usable; else general waste.' },
+  'chair':          { v:'non-recyclable', cat:'Mixed Material',    tip:'Donate to charity; solid wood can go to wood recycling.' },
+  'couch':          { v:'non-recyclable', cat:'Mixed Material',    tip:'Furniture bank donation or council bulky item collection.' },
+  'banana':         { v:'compostable',    cat:'Organic',           tip:'Compost bin or food waste collection — great for home composting.' },
+  'apple':          { v:'compostable',    cat:'Organic',           tip:'Compost bin — excellent for home composting.' },
+  'sandwich':       { v:'compostable',    cat:'Organic',           tip:'Food waste bin — do not mix with recycling.' },
+  'orange':         { v:'compostable',    cat:'Organic',           tip:'Compost bin or food waste collection.' },
+  'carrot':         { v:'compostable',    cat:'Organic',           tip:'Excellent for compost or food waste bin.' },
+  'hot dog':        { v:'compostable',    cat:'Organic',           tip:'Food waste bin — cooked food can attract pests in open compost.' },
+  'pizza':          { v:'compostable',    cat:'Organic',           tip:'Food waste bin — greasy pizza BOXES are NOT recyclable.' },
+  'donut':          { v:'compostable',    cat:'Organic',           tip:'Food waste bin only.' },
+  'cake':           { v:'compostable',    cat:'Organic',           tip:'Food waste bin — compostable at home too.' },
+  'broccoli':       { v:'compostable',    cat:'Organic',           tip:'Compost bin — a great nitrogen source.' },
+  'potted plant':   { v:'compostable',    cat:'Organic / Ceramic', tip:'Soil is compostable; ceramic pot is usually landfill.' },
+};
+
+const FALLBACK = {
+  v:'non-recyclable', cat:'Unknown Material',
+  tip:'Item not in database — check your local council recycling guidelines.'
+};
+
+// ════════════════════════════════════════
+//  LOADER
+// ════════════════════════════════════════
+const BOOT_MSGS = [
+  'Booting waste intelligence core...',
+  'Loading COCO object detection model...',
+  'Calibrating recyclability database...',
+  'Building 80-class waste index...',
+  'Initialising camera subsystem...',
+  'Loading neural weights...',
+  'System ready.',
+];
+const BOOT_LOG = [
+  '> sys.boot: OK',
+  '> tf.js: v4.20.0 loaded',
+  '> coco-ssd: v2.2.3',
+  '> db.classes: 45 mapped',
+  '> camera.api: detected',
+  '> ui.render: complete',
+  '> READY',
+];
+
+let ldProg = 0, ldMsgIdx = 0, modelReady = false, minTime = false;
+
+const ldBar  = document.getElementById('ld-bar');
+const ldPct  = document.getElementById('ld-pct');
+const ldMsg  = document.getElementById('ld-msg-txt');
+const ldLog  = document.getElementById('ld-log');
+
+// Typewrite boot log
+let logLine = 0;
+(function nextLog() {
+  if (logLine < BOOT_LOG.length) {
+    ldLog.innerHTML += BOOT_LOG[logLine++] + '<br>';
+    setTimeout(nextLog, 420);
+  }
+})();
+
+// Animate progress bar
+(function tick() {
+  const target = modelReady ? 100 : 83;
+  const speed  = modelReady ? 4 : 0.38;
+  if (ldProg < target) {
+    ldProg = Math.min(ldProg + speed, target);
+    ldBar.style.width = ldProg + '%';
+    ldPct.textContent = Math.floor(ldProg) + '%';
+    const mi = Math.min(Math.floor((ldProg/100)*(BOOT_MSGS.length-1)), BOOT_MSGS.length-1);
+    if (mi !== ldMsgIdx) { ldMsgIdx = mi; ldMsg.textContent = BOOT_MSGS[mi]; }
+  }
+  if (ldProg >= 100 && modelReady && minTime) { revealApp(); return; }
+  requestAnimationFrame(tick);
+})();
+
+setTimeout(() => { minTime = true; }, 3200);
+
+function revealApp() {
+  document.getElementById('loader').classList.add('out');
+  setTimeout(() => {
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('app').style.opacity = '1';
+    appReady = true;
+  }, 900);
+}
+
+// ════════════════════════════════════════
+//  CURSOR
+// ════════════════════════════════════════
+const cur  = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0, my=0, rx=0, ry=0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  if(cur){ cur.style.left=mx+'px'; cur.style.top=my+'px'; }
+});
+(function animCursor() {
+  rx += (mx-rx)*.12; ry += (my-ry)*.12;
+  if(ring){ ring.style.left=rx+'px'; ring.style.top=ry+'px'; }
+  requestAnimationFrame(animCursor);
+})();
+
+document.querySelectorAll('button,a,.upload-zone,.mode-tab').forEach(el => {
+  el.addEventListener('mouseenter', () => ring && ring.classList.add('big'));
+  el.addEventListener('mouseleave', () => ring && ring.classList.remove('big'));
+});
+
+// ════════════════════════════════════════
+//  MODEL LOAD
+// ════════════════════════════════════════
+let model = null, appReady = false;
+
+async function loadModel() {
+  try {
+    model = await cocoSsd.load({ base:'lite_mobilenet_v2' });
+    modelReady = true;
+    console.log('[SORT WISE] COCO-SSD model loaded.');
+  } catch(e) {
+    console.error(e);
+    ldMsg.textContent = 'Model load failed — check internet connection.';
+  }
+}
+loadModel();
+
+// ════════════════════════════════════════
+//  MODE SWITCHING
+// ════════════════════════════════════════
+let currentMode = 'camera';
+
+function switchMode(m) {
+  currentMode = m;
+  document.getElementById('tab-cam').classList.toggle('active', m === 'camera');
+  document.getElementById('tab-upload').classList.toggle('active', m === 'upload');
+  document.getElementById('mode-camera').classList.toggle('hidden', m !== 'camera');
+  document.getElementById('mode-upload').classList.toggle('hidden', m === 'camera');
+  if (m !== 'camera' && camStream) stopCamera();
+  clearResults();
+}
+
+// ════════════════════════════════════════
+//  CAMERA
+// ════════════════════════════════════════
+let camStream = null;
+const camVideo  = document.getElementById('cam-video');
+const camWrap   = document.getElementById('cam-wrap');
+const camPh     = document.getElementById('cam-ph');
+const dCanvas   = document.getElementById('detect-canvas');
+
+async function startCamera() {
+  if (!model) { alert('Model still loading — please wait a moment.'); return; }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal:'environment' }, width:{ideal:1280}, height:{ideal:720} }
+    });
+    camVideo.srcObject = camStream;
+    camVideo.style.display = 'block';
+    camPh.style.display = 'none';
+    camWrap.classList.add('scanning');
+
+    show('btn-analyze'); show('btn-stop'); hide('btn-start');
+  } catch(e) {
+    alert('Camera access denied. Try the "Upload Image" mode instead.');
+  }
+}
+
+function stopCamera() {
+  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+  camVideo.style.display = 'none';
+  camVideo.srcObject = null;
+  camPh.style.display = 'flex';
+  camWrap.classList.remove('scanning');
+
+  const ctx = dCanvas.getContext('2d');
+  ctx.clearRect(0,0,dCanvas.width,dCanvas.height);
+
+  show('btn-start'); hide('btn-analyze'); hide('btn-stop');
+  clearResults();
+}
+
+async function analyzeCamera() {
+  if (!model || !camStream) return;
+
+  const ov = document.getElementById('analyze-overlay-cam');
+  ov.classList.add('show');
+
+  // Snap frame to offscreen canvas
+  const pc = document.getElementById('proc-canvas');
+  pc.width  = camVideo.videoWidth  || 640;
+  pc.height = camVideo.videoHeight || 480;
+  pc.getContext('2d').drawImage(camVideo, 0, 0);
+
+  try {
+    const preds = await model.detect(pc);
+    ov.classList.remove('show');
+    drawBoxes(preds);
+    showResults(preds);
+  } catch(e) {
+    ov.classList.remove('show');
+    console.error(e);
+  }
+}
+
+// Draw bounding boxes on detection canvas, correctly scaled for object-fit:contain
+function drawBoxes(preds) {
+  const container = camWrap;
+  dCanvas.width  = container.offsetWidth;
+  dCanvas.height = container.offsetHeight;
+
+  const ctx = dCanvas.getContext('2d');
+  ctx.clearRect(0, 0, dCanvas.width, dCanvas.height);
+
+  const vw = camVideo.videoWidth  || dCanvas.width;
+  const vh = camVideo.videoHeight || dCanvas.height;
+  const cw = dCanvas.width;
+  const ch = dCanvas.height;
+
+  // object-fit: contain math
+  const scale   = Math.min(cw/vw, ch/vh);
+  const offsetX = (cw - vw*scale) / 2;
+  const offsetY = (ch - vh*scale) / 2;
+
+  preds.forEach(p => {
+    const info  = DB[p.class] || FALLBACK;
+    const color = info.v==='recyclable' ? '#00e676' : info.v==='compostable' ? '#ffc400' : '#ff1744';
+    const [x,y,w,h] = p.bbox;
+    const sx = x*scale + offsetX;
+    const sy = y*scale + offsetY;
+    const sw = w*scale;
+    const sh = h*scale;
+
+    // corner brackets
+    const bs = 14;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2.5;
+    const corners = [
+      [sx,sy+bs,sx,sy,sx+bs,sy],
+      [sx+sw-bs,sy,sx+sw,sy,sx+sw,sy+bs],
+      [sx,sy+sh-bs,sx,sy+sh,sx+bs,sy+sh],
+      [sx+sw-bs,sy+sh,sx+sw,sy+sh,sx+sw,sy+sh-bs],
+    ];
+    corners.forEach(([x1,y1,x2,y2,x3,y3]) => {
+      ctx.beginPath();
+      ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3);
+      ctx.stroke();
+    });
+
+    // label pill
+    ctx.font = 'bold 10px "Space Mono", monospace';
+    const label = `${p.class.toUpperCase()}  ${Math.round(p.score*100)}%`;
+    const tw = ctx.measureText(label).width;
+    const ph = 20, pd = 8;
+    ctx.fillStyle = color;
+    // rounded rect for label
+    const lx = sx, ly = sy - ph - 2;
+    ctx.beginPath();
+    ctx.roundRect(lx, ly, tw + pd*2, ph, 4);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.fillText(label, lx + pd, ly + ph - 5);
+  });
+}
+
+// ════════════════════════════════════════
+//  UPLOAD
+// ════════════════════════════════════════
+let uploadImg = null;
+
+function handleFile(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('up-preview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+
+    uploadImg = new Image();
+    uploadImg.src = e.target.result;
+
+    // hide placeholder text & icon
+    const zone = document.getElementById('upload-zone');
+    zone.querySelectorAll('p,.cam-ph-icon').forEach(el => el.style.display='none');
+
+    show('btn-analyze-up'); show('btn-clear-up');
+    clearResults();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearUpload() {
+  const prev = document.getElementById('up-preview');
+  prev.src = ''; prev.style.display = 'none';
+  document.getElementById('file-inp').value = '';
+  uploadImg = null;
+
+  const zone = document.getElementById('upload-zone');
+  zone.querySelectorAll('p,.cam-ph-icon').forEach(el => el.style.display='');
+
+  hide('btn-analyze-up'); hide('btn-clear-up');
+  clearResults();
+}
+
+async function analyzeUpload() {
+  if (!model || !uploadImg) return;
+
+  const ov = document.getElementById('analyze-overlay-up');
+  ov.classList.add('show');
+
+  const pc = document.getElementById('proc-canvas');
+  pc.width  = uploadImg.naturalWidth;
+  pc.height = uploadImg.naturalHeight;
+  pc.getContext('2d').drawImage(uploadImg, 0, 0);
+
+  try {
+    const preds = await model.detect(pc);
+    ov.classList.remove('show');
+    showResults(preds);
+  } catch(e) {
+    ov.classList.remove('show');
+    console.error(e);
+  }
+}
+
+// Drag and drop for upload
+const upZone = document.getElementById('upload-zone');
+upZone.addEventListener('dragover',  e => { e.preventDefault(); upZone.classList.add('drag'); });
+upZone.addEventListener('dragleave', () => upZone.classList.remove('drag'));
+upZone.addEventListener('drop', e => {
+  e.preventDefault(); upZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) handleFile({ target:{ files:[f] } });
+});
+
+// ════════════════════════════════════════
+//  RESULTS RENDERING
+// ════════════════════════════════════════
+const VERDICT_LABEL = {
+  'recyclable':     '♻ RECYCLABLE',
+  'non-recyclable': '✕ NON-RECYCLABLE',
+  'compostable':    '⟳ COMPOSTABLE',
+};
+const VERDICT_CLASS = {
+  'recyclable':'g', 'non-recyclable':'r', 'compostable':'a'
+};
+
+function showResults(preds) {
+  const sec   = document.getElementById('results-sec');
+  const cards = document.getElementById('cards');
+  const chips = document.getElementById('chips');
+
+  cards.innerHTML = '';
+  chips.innerHTML = '';
+
+  if (!preds.length) {
+    sec.style.display = 'block';
+    cards.innerHTML = `<div class="no-results">NO ITEMS DETECTED<br><span style="font-size:9px">Try better lighting, move closer, or use a cleaner background</span></div>`;
+    resetStats(); document.getElementById('results-n').textContent = '';
+    sec.scrollIntoView({ behavior:'smooth', block:'start' });
+    return;
+  }
+
+  let re=0, nr=0, co=0;
+
+  preds.forEach((p, i) => {
+    const info = DB[p.class] || FALLBACK;
+    const cls  = VERDICT_CLASS[info.v];
+    if (info.v==='recyclable')     re++;
+    else if (info.v==='compostable') co++;
+    else                             nr++;
+
+    const card = document.createElement('div');
+    card.className = `card ${cls}`;
+    card.style.animationDelay = (i * 0.07) + 's';
+    card.innerHTML = `
+      <div class="card-badge">${VERDICT_LABEL[info.v]}</div>
+      <div class="card-name">${p.class}</div>
+      <div class="card-conf">${Math.round(p.score*100)}% detection confidence</div>
+      <div class="conf-track"><div class="conf-fill" style="width:${Math.round(p.score*100)}%"></div></div>
+      <div class="card-divider"></div>
+      <div class="card-meta">
+        <div><span class="meta-lbl">Material</span><span class="meta-val">${info.cat}</span></div>
+        <div><span class="meta-lbl">Verdict</span><span class="meta-val">${info.v.replace('-',' ')}</span></div>
+      </div>
+      <div class="card-tip">${info.tip}</div>
+    `;
+    cards.appendChild(card);
+  });
+
+  // Stats
+  document.getElementById('st-re').textContent = re;
+  document.getElementById('st-nr').textContent = nr;
+  document.getElementById('st-co').textContent = co;
+  document.getElementById('st-to').textContent = preds.length;
+  document.getElementById('results-n').textContent = `${preds.length} item${preds.length!==1?'s':''} detected`;
+
+  // Chips
+  if(re) chips.innerHTML += `<span class="chip g">♻ ${re} Recyclable</span>`;
+  if(nr) chips.innerHTML += `<span class="chip r">✕ ${nr} Non-Recyclable</span>`;
+  if(co) chips.innerHTML += `<span class="chip a">⟳ ${co} Compostable</span>`;
+
+  sec.style.display = 'block';
+  sec.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function clearResults() {
+  document.getElementById('results-sec').style.display = 'none';
+  document.getElementById('cards').innerHTML = '';
+  document.getElementById('chips').innerHTML = '';
+  resetStats();
+}
+
+function resetStats() {
+  ['st-re','st-nr','st-co','st-to'].forEach(id => document.getElementById(id).textContent='0');
+}
+
+// ════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden');    }
+</script>
+
+</body>
+</html>
